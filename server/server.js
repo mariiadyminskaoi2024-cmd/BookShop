@@ -79,6 +79,8 @@ app.get("/api/orders/:userId", async (req, res) => {
 });
 
 const buildPath = path.join(__dirname, "../build");
+console.log("BUILD PATH:", buildPath);
+console.log("EXISTS:", fs.existsSync(buildPath));
 
 if (fs.existsSync(buildPath)) {
   app.use(express.static(buildPath));
