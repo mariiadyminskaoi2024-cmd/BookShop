@@ -2,21 +2,48 @@ const express = require("express");
 const cors = require("cors");
 const admin = require("firebase-admin");
 const path = require("path");
+const fs = require("fs");
 
 const app = express();
+const PORT = process.env.PORT || 5000;
+
 app.use(cors());
 app.use(express.json());
 
-const serviceAccount = require("./serviceAccountKey.json");
+let db = null;
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+try {
+  const serviceAccountPath = path.join(__dirname, "serviceAccountKey.json");
 
-const db = admin.firestore();
+  if (!fs.existsSync(serviceAccountPath)) {
+    console.warn("Файл serviceAccountKey.json не знайдено.");
+  } else {
+    const raw = fs.readFileSync(serviceAccountPath, "utf8");
+    const serviceAccount = JSON.parse(raw);
+
+    if (!serviceAccount.private_key) {
+      throw new Error("У serviceAccountKey.json відсутній private_key");
+    }
+
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+
+    db = admin.firestore();
+    console.log("Firebase Admin підключено успішно.");
+  }
+} catch (error) {
+  console.error("Помилка ініціалізації Firebase Admin:", error.message);
+}
 
 app.get("/api/orders/:userId", async (req, res) => {
   try {
+    if (!db) {
+      return res.status(503).json({
+        error: "Firebase Admin не налаштований. Перевір serviceAccountKey.json",
+      });
+    }
+
     const { userId } = req.params;
 
     const snapshot = await db
@@ -24,26 +51,22 @@ app.get("/api/orders/:userId", async (req, res) => {
       .where("userId", "==", userId)
       .get();
 
-    const orders = snapshot.docs
-      .map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }))
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const orders = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
 
     res.json(orders);
   } catch (error) {
-    console.error(error);
+    console.error("Помилка отримання замовлень:", error);
     res.status(500).json({ error: "Помилка сервера" });
   }
 });
 
-app.use(express.static(path.join(__dirname, "../build")));
-
-app.use((req, res) => {
-  res.sendFile(path.join(__dirname, "../build", "index.html"));
+app.get("/", (req, res) => {
+  res.send("BookShop backend працює");
 });
 
-app.listen(5000, () => {
-  console.log("🚀 Server running on http://localhost:5000");
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
 });

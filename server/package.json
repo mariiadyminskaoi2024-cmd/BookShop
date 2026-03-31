@@ -1,20 +1,19 @@
 {
-  "name": "book-store-lab5",
-  "version": "0.1.0",
-  "private": true,
-  "homepage": "https://mariiadyminskaoi2024-cmd.github.io/BookShop",
-  "dependencies": {
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "react-router-dom": "^7.0.0",
-    "react-scripts": "5.0.1"
+  "name": "server",
+  "version": "1.0.0",
+  "description": "BookShop backend server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
   },
- "scripts": {
-  "start": "react-scripts start",
-  "build": "react-scripts build",
-  "test": "react-scripts test",
-  "eject": "react-scripts eject",
-  "predeploy": "npm run build",
-  "deploy": "gh-pages -d build"
-}
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "firebase-admin": "^13.7.0"
+  }
 }

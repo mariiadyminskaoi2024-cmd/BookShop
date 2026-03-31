@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import { HashRouter as Router, Routes, Route, Link } from "react-router-dom";
 
 import {
   createUserWithEmailAndPassword,
@@ -9,11 +9,7 @@ import {
   onAuthStateChanged,
 } from "firebase/auth";
 
-import {
-  collection,
-  getDocs,
-  addDoc,
-} from "firebase/firestore";
+import { collection, getDocs, addDoc } from "firebase/firestore";
 
 import { auth, db } from "./firebase";
 
@@ -222,13 +218,18 @@ export default function App() {
               <p className="hero-label">Преміальна онлайн-книгарня</p>
               <h2>Знайди свою наступну улюблену книгу</h2>
               <p className="hero-text">
-                Каталог сучасних книг з програмування, саморозвитку та штучного інтелекту.
-                Обирай книги, додавай у кошик та оформлюй замовлення онлайн.
+                Каталог сучасних книг з програмування, саморозвитку та штучного
+                інтелекту. Обирай книги, додавай у кошик та оформлюй замовлення
+                онлайн.
               </p>
 
               <div className="hero-actions">
-                <a href="#catalog" className="hero-btn">Перейти до каталогу</a>
-                <a href="#account" className="hero-btn hero-btn-secondary">Мій акаунт</a>
+                <Link to="/" className="hero-btn">
+                  Перейти до каталогу
+                </Link>
+                <Link to="/account" className="hero-btn hero-btn-secondary">
+                  Мій акаунт
+                </Link>
               </div>
             </div>
           </section>
