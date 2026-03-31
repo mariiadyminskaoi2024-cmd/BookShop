@@ -16,54 +16,32 @@ try {
   if (process.env.FIREBASE_SERVICE_ACCOUNT) {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
-    if (!serviceAccount.private_key) {
-      throw new Error("У FIREBASE_SERVICE_ACCOUNT відсутній private_key");
-    }
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+
+    db = admin.firestore();
+    console.log("Firebase Admin через ENV");
+  } else {
+    const serviceAccount = require("./serviceAccountKey.json");
 
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
     });
 
     db = admin.firestore();
-    console.log("Firebase Admin підключено успішно через ENV.");
-  } else {
-    const serviceAccountPath = path.join(__dirname, "serviceAccountKey.json");
-
-    if (!fs.existsSync(serviceAccountPath)) {
-      console.warn("Файл serviceAccountKey.json не знайдено.");
-    } else {
-      const raw = fs.readFileSync(serviceAccountPath, "utf8");
-      const serviceAccount = JSON.parse(raw);
-
-      if (!serviceAccount.private_key) {
-        throw new Error("У serviceAccountKey.json відсутній private_key");
-      }
-
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-      });
-
-      db = admin.firestore();
-      console.log("Firebase Admin підключено успішно через файл.");
-    }
+    console.log("Firebase Admin через файл");
   }
 } catch (error) {
-  console.error("Помилка ініціалізації Firebase Admin:", error.message);
+  console.error("Firebase error:", error.message);
 }
 
+// 🔥 1. API ПЕРШИМ
 app.get("/api/orders/:userId", async (req, res) => {
   try {
-    if (!db) {
-      return res.status(503).json({
-        error: "Firebase Admin не налаштований. Перевір ключ Firebase",
-      });
-    }
-
-    const { userId } = req.params;
-
     const snapshot = await db
       .collection("orders")
-      .where("userId", "==", userId)
+      .where("userId", "==", req.params.userId)
       .get();
 
     const orders = snapshot.docs.map((doc) => ({
@@ -73,29 +51,26 @@ app.get("/api/orders/:userId", async (req, res) => {
 
     res.json(orders);
   } catch (error) {
-    console.error("Помилка отримання замовлень:", error);
-    res.status(500).json({ error: "Помилка сервера" });
+    res.status(500).json({ error: "Server error" });
   }
 });
 
+// 🔥 2. STATIC ФАЙЛИ
 const buildPath = path.join(__dirname, "../build");
 
 if (fs.existsSync(buildPath)) {
   app.use(express.static(buildPath));
 
+  // 🔥 3. ТІЛЬКИ ДЛЯ РОУТІВ REACT
   app.get("*", (req, res) => {
-    if (req.path.startsWith("/api")) {
-      return res.status(404).json({ error: "API route not found" });
-    }
-
     res.sendFile(path.join(buildPath, "index.html"));
   });
 } else {
   app.get("/", (req, res) => {
-    res.send("BookShop backend працює");
+    res.send("Backend працює");
   });
 }
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log("Server started on port", PORT);
 });
