@@ -27,6 +27,8 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
 
+  const API_URL = "https://bookshop-wwzz.onrender.com";
+
   useEffect(() => {
     loadBooks();
 
@@ -59,7 +61,7 @@ export default function App() {
 
   const loadOrders = async (uid) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/orders/${uid}`);
+      const res = await fetch(`${API_URL}/api/orders/${uid}`);
       const data = await res.json();
       setOrders(data);
     } catch (error) {
