@@ -49,10 +49,15 @@ export default function App() {
         id: doc.id,
         ...doc.data(),
       }));
+
       setBooks(booksFromDb);
+
+      if (booksFromDb.length === 0) {
+        setMessage("У базі даних немає книг у колекції books.");
+      }
     } catch (error) {
       console.error("Помилка завантаження книг:", error);
-      setMessage("Не вдалося завантажити книги.");
+      setMessage(`Помилка бази даних: ${error.message}`);
     }
   };
 
@@ -75,12 +80,23 @@ export default function App() {
   const handleRegister = async () => {
     try {
       setMessage("");
+
+      if (!email || !email.includes("@")) {
+        setMessage("Введіть коректний email.");
+        return;
+      }
+
+      if (!password || password.length < 6) {
+        setMessage("Пароль має містити щонайменше 6 символів.");
+        return;
+      }
+
       await createUserWithEmailAndPassword(auth, email, password);
       setMessage("Реєстрація успішна.");
       setEmail("");
       setPassword("");
     } catch (error) {
-      console.error(error);
+      console.error("Помилка реєстрації:", error);
       setMessage(error.message);
     }
   };
@@ -88,12 +104,23 @@ export default function App() {
   const handleLogin = async () => {
     try {
       setMessage("");
+
+      if (!email || !email.includes("@")) {
+        setMessage("Введіть коректний email.");
+        return;
+      }
+
+      if (!password) {
+        setMessage("Введіть пароль.");
+        return;
+      }
+
       await signInWithEmailAndPassword(auth, email, password);
       setMessage("Вхід успішний.");
       setEmail("");
       setPassword("");
     } catch (error) {
-      console.error(error);
+      console.error("Помилка входу:", error);
       setMessage(error.message);
     }
   };
@@ -104,7 +131,7 @@ export default function App() {
       setMessage("Вихід виконано.");
       setOrders([]);
     } catch (error) {
-      console.error(error);
+      console.error("Помилка виходу:", error);
       setMessage(error.message);
     }
   };

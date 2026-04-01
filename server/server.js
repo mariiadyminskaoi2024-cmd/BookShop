@@ -10,30 +10,39 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-let db = null;
+let db;
 
 try {
-  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  if (!admin.apps.length) {
+    if (
+      process.env.FIREBASE_PROJECT_ID &&
+      process.env.FIREBASE_CLIENT_EMAIL &&
+      process.env.FIREBASE_PRIVATE_KEY
+    ) {
+      admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId: process.env.FIREBASE_PROJECT_ID,
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+          privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+        }),
+      });
 
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
+      console.log("Firebase Admin initialized через ENV");
+    } else {
+      const serviceAccount = require("./serviceAccountKey.json");
 
-    db = admin.firestore();
-    console.log("Firebase Admin через ENV");
-  } else {
-    const serviceAccount = require("./serviceAccountKey.json");
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
 
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-
-    db = admin.firestore();
-    console.log("Firebase Admin через файл");
+      console.log("Firebase Admin initialized через файл");
+    }
   }
+
+  db = admin.firestore();
 } catch (error) {
-  console.error("Firebase error:", error.message);
+  console.error("Firebase initialization error:", error);
+  db = null;
 }
 
 app.get("/api/orders/:userId", async (req, res) => {
@@ -49,27 +58,28 @@ app.get("/api/orders/:userId", async (req, res) => {
       .where("userId", "==", userId)
       .get();
 
-    const orders = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const orders = snapshot.docs.map((doc) => {
+      const data = doc.data();
+
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate
+          ? data.createdAt.toDate().toISOString()
+          : data.createdAt || null,
+      };
+    });
 
     orders.sort((a, b) => {
-      const dateA = a.createdAt?.seconds
-        ? a.createdAt.seconds * 1000
-        : new Date(a.createdAt || 0).getTime();
-
-      const dateB = b.createdAt?.seconds
-        ? b.createdAt.seconds * 1000
-        : new Date(b.createdAt || 0).getTime();
-
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return dateB - dateA;
     });
 
     res.json(orders);
   } catch (error) {
     console.error("GET /api/orders/:userId error:", error);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: error.message || "Server error" });
   }
 });
 
@@ -85,16 +95,24 @@ app.post("/api/orders", async (req, res) => {
       return res.status(400).json({ error: "userId is required" });
     }
 
-    if (!items || !Array.isArray(items) || items.length === 0) {
+    if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: "Cart is empty" });
     }
 
+    const cleanItems = items.map((item) => ({
+      id: item.id || "",
+      title: item.title || "",
+      author: item.author || "",
+      price: Number(item.price || 0),
+      quantity: Number(item.quantity || 1),
+    }));
+
     const newOrder = {
       userId,
-      items,
-      totalPrice: totalPrice || 0,
+      items: cleanItems,
+      totalPrice: Number(totalPrice || 0),
       customerInfo: customerInfo || {},
-      createdAt: new Date().toISOString(),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
     const docRef = await db.collection("orders").add(newOrder);
@@ -108,7 +126,7 @@ app.post("/api/orders", async (req, res) => {
     });
   } catch (error) {
     console.error("POST /api/orders error:", error);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: error.message || "Server error" });
   }
 });
 
