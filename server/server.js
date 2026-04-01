@@ -36,12 +36,17 @@ try {
   console.error("Firebase error:", error.message);
 }
 
-// 🔥 1. API ПЕРШИМ
 app.get("/api/orders/:userId", async (req, res) => {
   try {
+    if (!db) {
+      return res.status(500).json({ error: "Database not initialized" });
+    }
+
+    const { userId } = req.params;
+
     const snapshot = await db
       .collection("orders")
-      .where("userId", "==", req.params.userId)
+      .where("userId", "==", userId)
       .get();
 
     const orders = snapshot.docs.map((doc) => ({
@@ -49,19 +54,69 @@ app.get("/api/orders/:userId", async (req, res) => {
       ...doc.data(),
     }));
 
+    orders.sort((a, b) => {
+      const dateA = a.createdAt?.seconds
+        ? a.createdAt.seconds * 1000
+        : new Date(a.createdAt || 0).getTime();
+
+      const dateB = b.createdAt?.seconds
+        ? b.createdAt.seconds * 1000
+        : new Date(b.createdAt || 0).getTime();
+
+      return dateB - dateA;
+    });
+
     res.json(orders);
   } catch (error) {
+    console.error("GET /api/orders/:userId error:", error);
     res.status(500).json({ error: "Server error" });
   }
 });
 
-// 🔥 2. STATIC ФАЙЛИ
+app.post("/api/orders", async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ error: "Database not initialized" });
+    }
+
+    const { userId, items, totalPrice, customerInfo } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: "userId is required" });
+    }
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: "Cart is empty" });
+    }
+
+    const newOrder = {
+      userId,
+      items,
+      totalPrice: totalPrice || 0,
+      customerInfo: customerInfo || {},
+      createdAt: new Date().toISOString(),
+    };
+
+    const docRef = await db.collection("orders").add(newOrder);
+
+    res.status(201).json({
+      message: "Order saved successfully",
+      order: {
+        id: docRef.id,
+        ...newOrder,
+      },
+    });
+  } catch (error) {
+    console.error("POST /api/orders error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 const buildPath = path.join(__dirname, "../build");
 
 if (fs.existsSync(buildPath)) {
   app.use(express.static(buildPath));
 
-  // 🔥 3. ТІЛЬКИ ДЛЯ РОУТІВ REACT
   app.get("*", (req, res) => {
     res.sendFile(path.join(buildPath, "index.html"));
   });
