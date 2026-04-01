@@ -1,8 +1,8 @@
 import React from "react";
 
 const CartPage = ({
-  cartItems,
-  totalPrice,
+  cartItems = [],
+  totalPrice = 0,
   increaseQuantity,
   decreaseQuantity,
   removeFromCart,
@@ -27,6 +27,7 @@ const CartPage = ({
               }}
             >
               <h3>{item.title}</h3>
+              <p>Автор: {item.author}</p>
               <p>Ціна: {item.price} грн</p>
               <p>Кількість: {item.quantity}</p>
 
