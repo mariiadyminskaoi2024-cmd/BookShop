@@ -9,8 +9,7 @@ import {
   onAuthStateChanged,
 } from "firebase/auth";
 
-import { collection, getDocs, addDoc } from "firebase/firestore";
-
+import { collection, getDocs } from "firebase/firestore";
 import { auth, db } from "./firebase";
 
 import Catalog from "./pages/Catalog";
@@ -60,10 +59,16 @@ export default function App() {
   const loadOrders = async (uid) => {
     try {
       const res = await fetch(`/api/orders/${uid}`);
+
+      if (!res.ok) {
+        throw new Error("Не вдалося завантажити замовлення");
+      }
+
       const data = await res.json();
-      setOrders(data);
+      setOrders(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Помилка завантаження замовлень:", error);
+      setOrders([]);
     }
   };
 
@@ -97,6 +102,7 @@ export default function App() {
     try {
       await signOut(auth);
       setMessage("Вихід виконано.");
+      setOrders([]);
     } catch (error) {
       console.error(error);
       setMessage(error.message);
@@ -169,22 +175,37 @@ export default function App() {
     }
 
     try {
-      await addDoc(collection(db, "orders"), {
-        userId: user.uid,
-        userEmail: user.email,
-        items: cart.map((item) => ({
-          title: item.title,
-          author: item.author,
-          price: item.price,
-          quantity: item.quantity,
-        })),
-        total: totalPrice,
-        createdAt: new Date().toISOString(),
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: user.uid,
+          items: cart.map((item) => ({
+            id: item.id,
+            title: item.title,
+            author: item.author,
+            price: item.price,
+            quantity: item.quantity,
+          })),
+          totalPrice,
+          customerInfo: {
+            email: user.email || "",
+          },
+        }),
       });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Помилка оформлення замовлення");
+      }
 
       setCart([]);
       setMessage("Замовлення успішно оформлено.");
       await loadOrders(user.uid);
+      window.location.hash = "#/account";
     } catch (error) {
       console.error("Помилка оформлення замовлення:", error);
       setMessage(error.message);
