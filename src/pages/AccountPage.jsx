@@ -48,18 +48,30 @@ const AccountPage = () => {
   };
 
   return (
-    <div style={{ padding: "20px", maxWidth: "900px", margin: "0 auto" }}>
-      <h1>Мій акаунт</h1>
-      <h2>Мої замовлення</h2>
+    <div
+      style={{
+        padding: "20px",
+        maxWidth: "1100px",
+        margin: "0 auto",
+        color: "#f7efe8",
+      }}
+    >
+      <h1 style={{ fontSize: "52px", marginBottom: "20px", fontWeight: "700" }}>
+        Мій рахунок
+      </h1>
 
-      {loading && <p>Завантаження...</p>}
+      <h2 style={{ fontSize: "34px", marginBottom: "24px", fontWeight: "700" }}>
+        Мої замовлення
+      </h2>
+
+      {loading && <p style={{ fontSize: "20px" }}>Завантаження...</p>}
 
       {!loading && error && (
-        <p style={{ color: "red" }}>{error}</p>
+        <p style={{ color: "#ffb3b3", fontSize: "18px" }}>{error}</p>
       )}
 
       {!loading && !error && orders.length === 0 && (
-        <p>Замовлень ще немає</p>
+        <p style={{ fontSize: "20px" }}>Замовлень ще немає</p>
       )}
 
       {!loading &&
@@ -69,48 +81,60 @@ const AccountPage = () => {
           <div
             key={order.id}
             style={{
-              border: "1px solid #ccc",
-              borderRadius: "8px",
-              padding: "15px",
-              marginBottom: "15px",
-              backgroundColor: "#fff",
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: "20px",
+              padding: "24px",
+              marginBottom: "20px",
+              background: "#fffaf5",
+              color: "#2b1a12",
+              boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
             }}
           >
-            <p>
+            <p style={{ margin: "10px 0", fontSize: "18px" }}>
               <strong>ID замовлення:</strong> {order.id}
             </p>
-            <p>
+
+            <p style={{ margin: "10px 0", fontSize: "18px" }}>
               <strong>Дата оформлення:</strong> {formatDate(order.createdAt)}
             </p>
-            <p>
+
+            <p style={{ margin: "10px 0", fontSize: "18px" }}>
               <strong>Кількість товарів:</strong> {getTotalItems(order.items)}
             </p>
-            <p>
+
+            <p style={{ margin: "10px 0", fontSize: "18px" }}>
               <strong>Сума:</strong> {Number(order.totalPrice || 0)} грн
             </p>
 
             {order.customerInfo && Object.keys(order.customerInfo).length > 0 && (
-              <div style={{ marginTop: "10px" }}>
-                <h4>Інформація про покупця:</h4>
+              <div style={{ marginTop: "18px" }}>
+                <h4 style={{ marginBottom: "10px", fontSize: "22px" }}>
+                  Інформація про покупця:
+                </h4>
+
                 {order.customerInfo.name && (
-                  <p>
+                  <p style={{ margin: "8px 0", fontSize: "17px" }}>
                     <strong>Ім’я:</strong> {order.customerInfo.name}
                   </p>
                 )}
+
                 {order.customerInfo.phone && (
-                  <p>
+                  <p style={{ margin: "8px 0", fontSize: "17px" }}>
                     <strong>Телефон:</strong> {order.customerInfo.phone}
                   </p>
                 )}
+
                 {order.customerInfo.address && (
-                  <p>
+                  <p style={{ margin: "8px 0", fontSize: "17px" }}>
                     <strong>Адреса:</strong> {order.customerInfo.address}
                   </p>
                 )}
               </div>
             )}
 
-            <h4 style={{ marginTop: "15px" }}>Товари:</h4>
+            <h4 style={{ marginTop: "20px", marginBottom: "12px", fontSize: "22px" }}>
+              Товари:
+            </h4>
 
             {Array.isArray(order.items) && order.items.length > 0 ? (
               <div>
@@ -118,32 +142,35 @@ const AccountPage = () => {
                   <div
                     key={index}
                     style={{
-                      padding: "8px 0",
+                      padding: "12px 0",
                       borderBottom:
                         index !== order.items.length - 1
-                          ? "1px solid #eee"
+                          ? "1px solid rgba(43,26,18,0.12)"
                           : "none",
                     }}
                   >
-                    <p style={{ margin: "4px 0" }}>
+                    <p style={{ margin: "6px 0", fontSize: "17px" }}>
                       <strong>Назва:</strong> {item.title || "Без назви"}
                     </p>
+
                     {item.author && (
-                      <p style={{ margin: "4px 0" }}>
+                      <p style={{ margin: "6px 0", fontSize: "17px" }}>
                         <strong>Автор:</strong> {item.author}
                       </p>
                     )}
-                    <p style={{ margin: "4px 0" }}>
+
+                    <p style={{ margin: "6px 0", fontSize: "17px" }}>
                       <strong>Кількість:</strong> {item.quantity || 1}
                     </p>
-                    <p style={{ margin: "4px 0" }}>
+
+                    <p style={{ margin: "6px 0", fontSize: "17px" }}>
                       <strong>Ціна:</strong> {item.price || 0} грн
                     </p>
                   </div>
                 ))}
               </div>
             ) : (
-              <p>Немає товарів</p>
+              <p style={{ fontSize: "17px" }}>Немає товарів</p>
             )}
           </div>
         ))}
