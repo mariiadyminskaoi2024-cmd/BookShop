@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 
 const CartPage = ({
   cartItems = [],
@@ -8,6 +8,60 @@ const CartPage = ({
   removeFromCart,
   onCheckout,
 }) => {
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const handleCheckout = async () => {
+    try {
+      setMessage("");
+
+      const userId = localStorage.getItem("userId") || "guest";
+
+      if (!Array.isArray(cartItems) || cartItems.length === 0) {
+        setMessage("Кошик порожній. Додайте товари перед оформленням замовлення.");
+        return;
+      }
+
+      setSubmitting(true);
+
+      const orderData = {
+        userId,
+        items: cartItems,
+        totalPrice,
+        customerInfo: {
+          name: localStorage.getItem("userName") || "",
+          phone: localStorage.getItem("userPhone") || "",
+          address: localStorage.getItem("userAddress") || "",
+        },
+      };
+
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(orderData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Не вдалося оформити замовлення");
+      }
+
+      setMessage("Замовлення успішно оформлено");
+
+      if (typeof onCheckout === "function") {
+        onCheckout();
+      }
+    } catch (error) {
+      console.error("Помилка оформлення замовлення:", error);
+      setMessage(error.message || "Сталася помилка під час оформлення замовлення");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div
       style={{
@@ -24,6 +78,21 @@ const CartPage = ({
       >
         Кошик
       </h1>
+
+      {message && (
+        <div
+          style={{
+            marginBottom: "20px",
+            padding: "16px 20px",
+            borderRadius: "14px",
+            background: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(255,255,255,0.12)",
+            fontSize: "18px",
+          }}
+        >
+          {message}
+        </div>
+      )}
 
       {cartItems.length === 0 ? (
         <div
@@ -126,8 +195,16 @@ const CartPage = ({
               Загальна сума: {totalPrice} грн
             </h2>
 
-            <button onClick={onCheckout} style={mainButtonStyle}>
-              Оформити замовлення
+            <button
+              onClick={handleCheckout}
+              style={{
+                ...mainButtonStyle,
+                opacity: submitting ? 0.7 : 1,
+                cursor: submitting ? "not-allowed" : "pointer",
+              }}
+              disabled={submitting}
+            >
+              {submitting ? "Оформлення..." : "Оформити замовлення"}
             </button>
           </div>
         </>

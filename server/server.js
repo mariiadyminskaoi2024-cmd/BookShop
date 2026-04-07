@@ -45,6 +45,7 @@ try {
   db = null;
 }
 
+// GET: отримати всі замовлення користувача
 app.get("/api/orders/:userId", async (req, res) => {
   try {
     if (!db) {
@@ -52,6 +53,10 @@ app.get("/api/orders/:userId", async (req, res) => {
     }
 
     const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: "userId is required" });
+    }
 
     const snapshot = await db
       .collection("orders")
@@ -64,25 +69,28 @@ app.get("/api/orders/:userId", async (req, res) => {
       return {
         id: doc.id,
         ...data,
-        createdAt: data.createdAt?.toDate
-          ? data.createdAt.toDate().toISOString()
-          : data.createdAt || null,
+        createdAt:
+          data.createdAt && typeof data.createdAt.toDate === "function"
+            ? data.createdAt.toDate().toISOString()
+            : data.createdAt || null,
       };
     });
 
+    // Сортування від найновіших до найстаріших
     orders.sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return dateB - dateA;
     });
 
-    res.json(orders);
+    res.status(200).json(orders);
   } catch (error) {
     console.error("GET /api/orders/:userId error:", error);
     res.status(500).json({ error: error.message || "Server error" });
   }
 });
 
+// POST: зберегти нове замовлення
 app.post("/api/orders", async (req, res) => {
   try {
     if (!db) {
@@ -95,6 +103,7 @@ app.post("/api/orders", async (req, res) => {
       return res.status(400).json({ error: "userId is required" });
     }
 
+    // Перевірка, щоб не зберігати порожній кошик
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: "Cart is empty" });
     }
@@ -107,12 +116,17 @@ app.post("/api/orders", async (req, res) => {
       quantity: Number(item.quantity || 1),
     }));
 
+    const calculatedTotalPrice = cleanItems.reduce((sum, item) => {
+      return sum + item.price * item.quantity;
+    }, 0);
+
     const newOrder = {
       userId,
       items: cleanItems,
-      totalPrice: Number(totalPrice || 0),
+      totalPrice:
+        totalPrice !== undefined ? Number(totalPrice) : calculatedTotalPrice,
       customerInfo: customerInfo || {},
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: new Date().toISOString(),
     };
 
     const docRef = await db.collection("orders").add(newOrder);
